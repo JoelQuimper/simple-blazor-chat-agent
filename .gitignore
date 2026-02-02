@@ -416,3 +416,9 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Application settings
+appsettings.*.json
+
+# Local data
+data/
