@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/blazor-chat-agent/">
+    <Project Path="blazor-chat-agent/blazor-chat-agent.csproj" />
+  </Folder>
+</Solution>

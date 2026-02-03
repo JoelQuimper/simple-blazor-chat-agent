@@ -1,0 +1,137 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+@inject FoundryService FoundryService
+@inject HtmlProcessingService HtmlProcessingService
+@using BlazorChatAgent.Services
+@using System.Text.RegularExpressions
+
+<PageTitle>Blazor Chat Agent</PageTitle>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <h2>Blazor Chat Agent</h2>
+    </div>
+
+    <div class="chat-messages">
+        @foreach (var message in messages)
+        {
+            @if (message.IsUser)
+            {
+                <div class="message user-message">
+                    <div class="message-content">@message.Text</div>
+                </div>
+            }
+            else
+            {
+                <div class="message agent-message">
+                    <div class="message-content">@((MarkupString)message.Text)</div>
+                </div>
+            }
+        }
+        @if (isSending)
+        {
+            <div class="message agent-message">
+                <div class="message-content typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        }
+        <div @ref="messagesEnd"></div>
+    </div>
+
+    <div class="chat-input-container">
+        <div class="input-group">
+            <input type="text" @bind="inputMessage" @bind:event="oninput" @onkeydown="HandleKeyDown"
+                placeholder="Type your message..." class="chat-input" disabled="@isSending" @ref="chatInput" />
+            <button @onclick="SendMessage" class="send-button"
+                disabled="@(string.IsNullOrWhiteSpace(inputMessage) || isSending)">
+                @if (isSending)
+                {
+                    <span>Sending...</span>
+                }
+                else
+                {
+                    <span>Send</span>
+                }
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<ChatMessage> messages = new();
+    private string inputMessage = string.Empty;
+    private bool isSending = false;
+    private ElementReference messagesEnd;
+    private ElementReference chatInput;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Add welcome message from the bot
+        messages.Add(new ChatMessage
+        {
+            Text = "Hello! I'm a Microsoft Foundry Agent. How can I help you today?",
+            IsUser = false
+        });
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await ScrollToBottom();
+        if (firstRender)
+        {
+            await chatInput.FocusAsync();
+        }
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("scrollToElement", messagesEnd);
+        }
+        catch { }
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(inputMessage))
+            return;
+
+        // Add user message
+        messages.Add(new ChatMessage { Text = inputMessage, IsUser = true });
+        var userInput = inputMessage;
+        inputMessage = string.Empty;
+
+        isSending = true;
+        StateHasChanged();
+        await ScrollToBottom();
+
+        // Call FoundryService to get agent response
+        var agentResponse = await FoundryService.GetResponseAsync(userInput);
+        var formattedResponse = HtmlProcessingService.ConvertMarkdownLinksToHtml(agentResponse);
+        messages.Add(new ChatMessage { Text = formattedResponse, IsUser = false });
+
+        isSending = false;
+        StateHasChanged();
+        await ScrollToBottom();
+        await chatInput.FocusAsync();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !isSending)
+        {
+            await SendMessage();
+        }
+    }
+
+    private class ChatMessage
+    {
+        public string Text { get; set; } = string.Empty;
+        public bool IsUser { get; set; }
+    }
+}

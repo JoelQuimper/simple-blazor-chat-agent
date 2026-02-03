@@ -83,7 +83,7 @@ src/blazor-chat-agent/
 │   ├── Layout/         # Layout components
 │   └── App.razor       # Root component
 ├── Models/             # Data models
-├── Services/           # Business logic (FoundryClient)
+├── Services/           # Business logic (FoundryService)
 ├── wwwroot/            # Static assets (CSS, JS)
 └── Program.cs          # Application startup
 ```
